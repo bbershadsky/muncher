@@ -17,28 +17,34 @@ import { useRouter } from 'next/router';
 import TextareaAutosize from 'react-textarea-autosize';
 import { MDXRemote } from 'next-mdx-remote';
 
+interface ProfileProps {
+  settings?: boolean;
+  user?: UserProps;
+}
 export const profileWidth = 'max-w-5xl mx-auto px-4 sm:px-6 lg:px-8';
 
-export default function Profile({
-  settings,
-  user
-}: {
-  settings?: boolean;
-  user: UserProps;
-}) {
+export const Profile: React.FC<ProfileProps> = ({ settings = false, user }) => {
   const router = useRouter();
   const { data: session } = useSession();
+
   const [saving, setSaving] = useState(false);
   const [data, setData] = useState({
-    username: user.username,
-    image: user.image,
-    bio: user.bio || '',
-    bioMdx: user.bioMdx
+    username: user?.username || '',
+    image: user?.image || '',
+    bio: user?.bio || '',
+    bioMdx: user?.bioMdx || null
   });
 
-  if (data.username !== user.username) {
-    setData(user);
-  }
+  useEffect(() => {
+    if (user) {
+      setData({
+        username: user.username,
+        image: user.image,
+        bio: user.bio || '',
+        bioMdx: user.bioMdx
+      });
+    }
+  }, [user]);
 
   const [error, setError] = useState('');
   const settingsPage =
@@ -46,7 +52,7 @@ export default function Profile({
     (router.query.settings === 'true' && router.asPath === '/settings');
 
   const handleDismiss = useCallback(() => {
-    if (settingsPage) router.replace(`/${user.username}`);
+    if (settingsPage) router.replace(`/${user?.username}`);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [router]);
 
@@ -67,7 +73,7 @@ export default function Profile({
           ...data,
           bioMdx
         }); // optimistically show updated state for bioMdx
-        router.replace(`/${user.username}`, undefined, { shallow: true });
+        router.replace(`/${user?.username}`, undefined, { shallow: true });
       } else if (response.status === 401) {
         setError('Not authorized to edit this profile.');
       } else {
@@ -92,6 +98,10 @@ export default function Profile({
     document.addEventListener('keydown', onKeyDown);
     return () => document.removeEventListener('keydown', onKeyDown);
   }, [onKeyDown]);
+
+  if (!user) {
+    return <div>Loading user data...</div>; // Handle the case where user is undefined or null
+  }
 
   return (
     <div className="min-h-screen pb-20">
@@ -186,72 +196,64 @@ export default function Profile({
       {/* Bio */}
       <div className={`${profileWidth} mt-16`}>
         <h2 className="font-semibold font-mono text-2xl text-white">Bio</h2>
-        {settingsPage ? (
-          <>
-            <TextareaAutosize
-              name="description"
-              onInput={(e) => {
-                setData({
-                  ...data,
-                  bio: (e.target as HTMLTextAreaElement).value
-                });
-              }}
-              className="mt-1 w-full max-w-2xl px-0 text-sm tracking-wider leading-6 text-white bg-black font-mono border-0 border-b border-gray-800 focus:border-white resize-none focus:outline-none focus:ring-0"
-              placeholder="Enter a short bio about yourself... (Markdown supported)"
-              value={data.bio}
-            />
-            <div className="flex justify-end w-full max-w-2xl">
-              <p className="text-gray-400 font-mono text-sm">
-                {data.bio.length}/256
-              </p>
-            </div>
-          </>
-        ) : (
-          <article className="mt-3 max-w-2xl text-sm tracking-wider leading-6 text-white font-mono prose prose-headings:text-white prose-a:text-white">
-            <MDXRemote {...data.bioMdx} />
-          </article>
-        )}
+        {
+          settingsPage ? (
+            <>
+              <TextareaAutosize
+                name="description"
+                onInput={(e) => {
+                  setData({
+                    ...data,
+                    bio: (e.target as HTMLTextAreaElement).value
+                  });
+                }}
+                className="mt-1 w-full max-w-2xl px-0 text-sm tracking-wider leading-6 text-white bg-black font-mono border-0 border-b border-gray-800 focus:border-white resize-none focus:outline-none focus:ring-0"
+                placeholder="Enter a short bio about yourself... (Markdown supported)"
+                value={data.bio}
+              />
+              <div className="flex justify-end w-full max-w-2xl">
+                <p className="text-gray-400 font-mono text-sm">
+                  {data.bio.length}/256
+                </p>
+              </div>
+            </>
+          ) : null
+          // <article className="mt-3 max-w-2xl text-sm tracking-wider leading-6 text-white font-mono prose prose-headings:text-white prose-a:text-white">
+          //   <MDXRemote {...data.bioMdx} />
+          // </article>
+        }
       </div>
 
       {/* Edit buttons */}
-      {settingsPage ? (
-        <div className="fixed bottom-10 right-10 flex items-center space-x-3">
-          <p className="text-sm text-gray-500">{error}</p>
-          <button
-            className={`${
-              saving ? 'cursor-not-allowed' : ''
-            } rounded-full border border-[#0070F3] hover:border-2 w-12 h-12 flex justify-center items-center transition-all`}
-            disabled={saving}
-            onClick={handleSave}
-          >
-            {saving ? (
-              <LoadingDots color="white" />
-            ) : (
-              <CheckIcon className="h-4 w-4 text-white" />
-            )}
-          </button>
-          <Link href={`/${user.username}`} shallow replace scroll={false}>
-            <a className="rounded-full border border-gray-800 hover:border-white w-12 h-12 flex justify-center items-center transition-all">
-              <XIcon className="h-4 w-4 text-white" />
-            </a>
-          </Link>
-        </div>
-      ) : session?.username === user.username ? (
+
+      <div className="fixed bottom-10 right-10 flex items-center space-x-3">
+        <p className="text-sm text-gray-500">{error}</p>
+        <button
+          className={`${
+            saving ? 'cursor-not-allowed' : ''
+          } rounded-full border border-[#0070F3] hover:border-2 w-12 h-12 flex justify-center items-center transition-all`}
+          disabled={saving}
+          onClick={handleSave}
+        >
+          {saving ? (
+            <LoadingDots color="white" />
+          ) : (
+            <CheckIcon className="h-4 w-4 text-white" />
+          )}
+        </button>
         <Link
-          href={{ query: { settings: true } }}
-          as="/settings"
+          href={`/${user.username}`}
           shallow
           replace
           scroll={false}
+          className="rounded-full border border-gray-800 hover:border-white w-12 h-12 flex justify-center items-center transition-all"
         >
-          <a className="fixed bottom-10 right-10 rounded-full border bg-black border-gray-800 hover:border-white w-12 h-12 flex justify-center items-center transition-all">
-            <EditIcon className="h-4 w-4 text-white" />
-          </a>
+          <XIcon className="h-4 w-4 text-white" />
         </Link>
-      ) : null}
+      </div>
     </div>
   );
-}
+};
 
 const tabs = [
   { name: 'Profile' },

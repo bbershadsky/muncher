@@ -79,7 +79,7 @@ export async function getFirstUser(): Promise<UserProps | null> {
 
 export async function getAllUsers(): Promise<ResultProps[]> {
   const client = await clientPromise;
-  const collection = client.db('test').collection('users');
+  const collection = client.db('youtube').collection('users');
   return await collection
     .aggregate<ResultProps>([
       {

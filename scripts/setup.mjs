@@ -4,6 +4,9 @@ import dotenv from 'dotenv';
 
 dotenv.config();
 
+const DATABASE_NAME = 'youtube';
+const COLLECTION_NAME = 'users';
+
 const setup = async () => {
   let client;
 
@@ -11,43 +14,33 @@ const setup = async () => {
     client = new MongoClient(process.env.MONGODB_URI);
     await client.connect();
 
-    const hasData = await client
-      .db('test')
-      .collection('users')
-      .countDocuments();
+    const db = client.db(DATABASE_NAME);
+    const collection = db.collection(COLLECTION_NAME);
+
+    const hasData = await collection.countDocuments();
 
     if (hasData) {
-      console.log('Database already exists with data');
-      client.close();
+      console.log('Database already contains data.');
       return;
     }
 
-    const records = [...Array(10)].map(() => {
-      const [fName, lName] = faker.name.findName().split(' ');
-      const username = faker.internet.userName(fName, lName);
-      const email = faker.internet.email(fName, lName);
-      const image = faker.image.people(640, 480, true);
+    const records = [...Array(10)].map(() => ({
+      name: faker.name.findName(),
+      username: faker.internet.userName(),
+      email: faker.internet.email(),
+      image: faker.image.people(640, 480, true),
+      followers: faker.datatype.number({ min: 0, max: 1000 }),
+      emailVerified: faker.datatype.boolean() ? new Date() : null
+    }));
 
-      return {
-        name: `${fName} ${lName}`,
-        username,
-        email,
-        image,
-        followers: 0,
-        emailVerified: null
-      };
-    });
-
-    const insert = await client
-      .db('test')
-      .collection('users')
-      .insertMany(records);
+    const insert = await collection.insertMany(records);
 
     if (insert.acknowledged) {
-      console.log('Successfully inserted records');
+      console.log('Successfully inserted records:', insert.insertedCount);
     }
+    return null;
   } catch (error) {
-    return 'Database is not ready yet';
+    console.error('Failed to set up database:', error);
   } finally {
     if (client) {
       await client.close();
@@ -55,10 +48,8 @@ const setup = async () => {
   }
 };
 
-try {
-  setup();
-} catch {
-  console.warn('Database is not ready yet. Skipping seeding...');
-}
+setup().catch((error) => {
+  console.error('Setup failed:', error);
+});
 
 export { setup };

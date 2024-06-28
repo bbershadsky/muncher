@@ -9,11 +9,11 @@ const nextConfig = {
       'cloudflare-ipfs.com',
       'loremflickr.com'
     ]
-  },
-  experimental: {
-    legacyBrowsers: false,
-    browsersListForSwc: true
   }
+  // experimental: {
+  //   legacyBrowsers: false,
+  //   browsersListForSwc: true
+  // }
 };
 
 module.exports = nextConfig;
